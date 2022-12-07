@@ -151,7 +151,7 @@ def count_snacks(img_path: str, hsv_values):
 
 
 def auto_check_color(img_path: str, right_vals):
-    results = {}
+    results = {"red": 0, "green": 0, "yellow": 0, "purple": 0}
     global params
     for color in params:
         res = count_snacks(img_path, params[color])
@@ -171,7 +171,6 @@ def detect(img_path: str, right_vals: str) -> Dict[str, int]:
 
     results = {}
     global params
-
     results = auto_check_color(img_path, right_vals=right_vals)
     # manual_calibration(img_path, params["purple"])
 
@@ -196,13 +195,24 @@ def main(data_path: Path, output_file_path: Path):
         fruits = detect(str(img_path), valid_data)
         results[img_path.name] = fruits
 
+    score = 0
+
     for name in results:
         data = results[name]
-
+        tmp_score = 0
+        wage = 0
         print(name)
         for color in data:
+            tmp_score += abs(valid_data[name][color] - data[color])
+            wage += valid_data[name][color]
             check_validity(valid_data[name][color], data[color], name, color)
         print("\n")
+
+        score += tmp_score / wage
+
+    score = score * 100/40
+    print(f"relative error: {score}%")
+    print(f"score: {100-score}%")
 
     with open(output_file_path, 'w') as ofp:
         json.dump(results, ofp)
