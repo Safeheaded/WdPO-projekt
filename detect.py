@@ -7,47 +7,70 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
+H_min = 20
+S_min = 153
+V_min = 100
 
-H_min = 0
-S_min = 0
-V_min = 0
+H_max = 26
+S_max = 255
+V_max = 255
 
-H_max = 0
-S_max = 0
-V_max = 0
+erosion = 5
+dilation = 4
 
-erosion = 0
-dilation = 0
+params = {
+    "red": {
+        "h_min": 174,
+        "s_min": 174,
+        "v_min": 108,
+        "h_max": 179,
+        "s_max": 226,
+        "v_max": 215,
+        "er": 3,
+        "dil": 10
+    },
+    "yellow": {
+        "h_min": 20,
+        "s_min": 153,
+        "v_min": 100,
+        "h_max": 26,
+        "s_max": 255,
+        "v_max": 255,
 
-H_min = 174
-S_min = 174
-V_min = 108
+        "er": 5,
+        "dil": 4
+    },
+    "purple": {
+        "h_min": 162,
+        "s_min": 0,
+        "v_min": 0,
 
-H_max = 179
-S_max = 226
-V_max = 215
+        "h_max": 176,
+        "s_max": 235,
+        "v_max": 121,
 
-erosion = 3
-dilation = 10
+        "er": 13,
+        "dil": 13
+    },
+    "green": {
+        "h_min": 36,
+        "s_min": 195,
+        "v_min": 137,
 
-# żółty git
+        "h_max": 51,
+        "s_max": 255,
+        "v_max": 245,
 
-# H_min = 20
-# S_min = 153
-# V_min = 100
-#
-# H_max = 26
-# S_max = 255
-# V_max = 255
-#
-# erosion = 5
-# dilation = 4
+        "er": 1,
+        "dil": 9
+    }}
+
 
 def empty_callback(value):
     pass
 
 
-def manual_calibration(img_path: str):
+def manual_calibration(img_path: str, hsv_values):
     img = cv2.imread(img_path, cv2.IMREAD_COLOR)
     cv2.namedWindow('image')
     cv2.resizeWindow('image', 420, 375)
@@ -84,18 +107,19 @@ def manual_calibration(img_path: str):
         erosion = cv2.getTrackbarPos('Erosion', 'image')
         dilation = cv2.getTrackbarPos('Dilation', 'image')
 
-        erosion_kernel = np.ones((erosion, erosion), np.uint8)
-        dilation_kernel = np.ones((dilation, dilation), np.uint8)
+        h_min, s_min, v_min, h_max, s_max, h_max, v_max, er, dil = hsv_values.values()
+
+        erosion_kernel = np.ones((er, er), np.uint8)
+        dilation_kernel = np.ones((dil, dil), np.uint8)
 
         img_HSV = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
-        result = cv2.inRange(img_HSV, (H_min, S_min, V_min), (H_max, S_max, V_max))
+        result = cv2.inRange(img_HSV, (h_min, s_min, v_min), (h_max, s_max, v_max))
         erosionRes = cv2.erode(result, erosion_kernel, iterations=1)
         dilationRes = cv2.dilate(erosionRes, dilation_kernel, iterations=1)
 
         # ret, thresh = cv2.threshold(dilationRes, 127, 255, 0)
         contours, hierarchy = cv2.findContours(dilationRes, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        print(len(contours))
         cv2.drawContours(resized, contours, -1, (0, 255, 0), 3)
 
         img_name = img_path.split('\\')[1]
@@ -108,82 +132,52 @@ def manual_calibration(img_path: str):
     cv2.destroyAllWindows()
 
 
-def auto_check_color(img_path: str, color: str, right_vals):
+def count_snacks(img_path: str, hsv_values):
     img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+    h_min, s_min, v_min, h_max, s_max, v_max, er, dil = hsv_values.values()
 
     scale = .2
     width = int(img.shape[0] * scale)
     height = int(img.shape[1] * scale)
     resized = cv2.resize(img, (height, width), interpolation=cv2.INTER_AREA)
 
-    global H_min, S_min, V_min, H_max, S_max, V_max, erosion, dilation
-
-    erosion_kernel = np.ones((erosion, erosion), np.uint8)
-    dilation_kernel = np.ones((dilation, dilation), np.uint8)
+    erosion_kernel = np.ones((er, er), np.uint8)
+    dilation_kernel = np.ones((dil, dil), np.uint8)
 
     img_HSV = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
-    result = cv2.inRange(img_HSV, (H_min, S_min, V_min), (H_max, S_max, V_max))
+    result = cv2.inRange(img_HSV, (h_min, s_min, v_min), (h_max, s_max, v_max))
     erosionRes = cv2.erode(result, erosion_kernel, iterations=1)
     dilationRes = cv2.dilate(erosionRes, dilation_kernel, iterations=1)
 
     contours, hierarchy = cv2.findContours(dilationRes, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    return contours
 
-    # img_name = img_path.split('\\')[1]
-    #
-    # if color == 'red':
-    #     check_validity(right_vals[img_name]['red'], len(contours), img_name)
-    # elif color == "purple":
-    #     check_validity(right_vals[img_name]['purple'], len(contours), img_name)
-    # elif color == "yellow":
-    #     check_validity(right_vals[img_name]['yellow'], len(contours), img_name)
-    # elif color == "green":
-    #     check_validity(right_vals[img_name]['green'], len(contours), img_name)
 
-    results = {'red': 0, 'yellow': 0, 'green': 0, 'purple': 0}
-
-    if color == 'red':
-        results["red"] = len(contours)
-    elif color == "purple":
-        results["purple"] = len(contours)
-    elif color == "yellow":
-        results["yellow"] = len(contours)
-    elif color == "green":
-        results["green"] = len(contours)
+def auto_check_color(img_path: str, color: str, right_vals):
+    results = {}
+    global params
+    for color in params:
+        contours = count_snacks(img_path, params[color])
+        results[color] = len(contours)
 
     return results
 
 
-def check_validity(right_val, count, img_name):
+def check_validity(right_val, count, img_name, color):
     if right_val == count:
-        print("{} - Success".format(img_name))
+        print("{} - Success".format(color))
     else:
-        print("{} - Should be {}, is {}".format(img_name, right_val, count))
-
+        print("{} - Should be {}, is {}".format(color, right_val, count))
 
 
 def detect(img_path: str, rightVals: str) -> Dict[str, int]:
-    """Object detection function, according to the project description, to implement.
 
-    Parameters
-    ----------
-    img_path : str
-        Path to processed image.
+    results = {}
 
-    Returns
-    -------
-    Dict[str, int]
-        Dictionary with quantity of each object.
-    """
+    results = auto_check_color(img_path, right_vals=rightVals, color="yellow")
+    # manual_calibration(img_path)
 
-    # results = auto_check_color(img_path, right_vals=rightVals, color="red")
-    manual_calibration(img_path)
-    red = 0
-    yellow = 0
-    green = 0
-    purple = 0
-
-    # return {'red': red, 'yellow': yellow, 'green': green, 'purple': purple}
-    return {}
+    return results
 
 
 @click.command()
@@ -206,10 +200,11 @@ def main(data_path: Path, output_file_path: Path):
 
     for name in results:
         data = results[name]
-        if data["red"] == valid_data[name]["red"]:
-            print("{} - Success".format(name))
-        else:
-            print("{} - Should be {}, is {}".format(name, valid_data[name]["red"], data["red"]))
+
+        print(name)
+        for color in data:
+            check_validity(valid_data[name][color], data[color], name, color)
+        print("\n")
 
     with open(output_file_path, 'w') as ofp:
         json.dump(results, ofp)
