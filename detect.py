@@ -42,15 +42,15 @@ params = {
     },
     "purple": {
         "h_min": 162,
-        "s_min": 0,
+        "s_min": 82,
         "v_min": 0,
 
         "h_max": 176,
         "s_max": 235,
         "v_max": 121,
 
-        "er": 13,
-        "dil": 13
+        "er": 4,
+        "dil": 12
     },
     "green": {
         "h_min": 36,
@@ -75,18 +75,18 @@ def manual_calibration(img_path: str, hsv_values):
     cv2.namedWindow('image')
     cv2.resizeWindow('image', 420, 375)
 
-    global H_min, S_min, V_min, H_max, S_max, V_max, erosion, dilation
+    h_min, s_min, v_min, h_max, s_max, v_max, er, dil = hsv_values.values()
 
-    cv2.createTrackbar('H_min', 'image', H_min, 179, empty_callback)
-    cv2.createTrackbar('S_min', 'image', S_min, 255, empty_callback)
-    cv2.createTrackbar('V_min', 'image', V_min, 255, empty_callback)
+    cv2.createTrackbar('H_min', 'image', h_min, 179, empty_callback)
+    cv2.createTrackbar('S_min', 'image', s_min, 255, empty_callback)
+    cv2.createTrackbar('V_min', 'image', v_min, 255, empty_callback)
 
-    cv2.createTrackbar('H_max', 'image', H_max, 179, empty_callback)
-    cv2.createTrackbar('S_max', 'image', S_max, 255, empty_callback)
-    cv2.createTrackbar('V_max', 'image', V_max, 255, empty_callback)
+    cv2.createTrackbar('H_max', 'image', h_max, 179, empty_callback)
+    cv2.createTrackbar('S_max', 'image', s_max, 255, empty_callback)
+    cv2.createTrackbar('V_max', 'image', v_max, 255, empty_callback)
 
-    cv2.createTrackbar('Erosion', 'image', erosion, 20, empty_callback)
-    cv2.createTrackbar('Dilation', 'image', dilation, 20, empty_callback)
+    cv2.createTrackbar('Erosion', 'image', er, 20, empty_callback)
+    cv2.createTrackbar('Dilation', 'image', dil, 20, empty_callback)
 
     # TODO: Implement detection method.
     scale = .2
@@ -107,24 +107,21 @@ def manual_calibration(img_path: str, hsv_values):
         erosion = cv2.getTrackbarPos('Erosion', 'image')
         dilation = cv2.getTrackbarPos('Dilation', 'image')
 
-        h_min, s_min, v_min, h_max, s_max, h_max, v_max, er, dil = hsv_values.values()
-
-        erosion_kernel = np.ones((er, er), np.uint8)
-        dilation_kernel = np.ones((dil, dil), np.uint8)
-
-        img_HSV = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
-        result = cv2.inRange(img_HSV, (h_min, s_min, v_min), (h_max, s_max, v_max))
-        erosionRes = cv2.erode(result, erosion_kernel, iterations=1)
-        dilationRes = cv2.dilate(erosionRes, dilation_kernel, iterations=1)
-
-        # ret, thresh = cv2.threshold(dilationRes, 127, 255, 0)
-        contours, hierarchy = cv2.findContours(dilationRes, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-        cv2.drawContours(resized, contours, -1, (0, 255, 0), 3)
+        res = count_snacks(img_path, {
+            "h_min": H_min,
+            "s_min": S_min,
+            "v_min": V_min,
+            "h_max": H_max,
+            "s_max": S_max,
+            "v_max": V_max,
+            "er": erosion,
+            "dil": dilation
+        })
+        cv2.drawContours(resized, res["contours"], -1, (0, 255, 0), 3)
 
         img_name = img_path.split('\\')[1]
 
-        cv2.imshow('{} - result'.format(img_name), dilationRes)
+        cv2.imshow('{} - result'.format(img_name), res["dilationRes"])
         cv2.imshow('{} - original'.format(img_name), resized)
 
         key = cv2.waitKey(30)
@@ -150,15 +147,15 @@ def count_snacks(img_path: str, hsv_values):
     dilationRes = cv2.dilate(erosionRes, dilation_kernel, iterations=1)
 
     contours, hierarchy = cv2.findContours(dilationRes, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    return contours
+    return {"contours": contours, "dilationRes": dilationRes}
 
 
-def auto_check_color(img_path: str, color: str, right_vals):
+def auto_check_color(img_path: str, right_vals):
     results = {}
     global params
     for color in params:
-        contours = count_snacks(img_path, params[color])
-        results[color] = len(contours)
+        res = count_snacks(img_path, params[color])
+        results[color] = len(res["contours"])
 
     return results
 
@@ -170,12 +167,13 @@ def check_validity(right_val, count, img_name, color):
         print("{} - Should be {}, is {}".format(color, right_val, count))
 
 
-def detect(img_path: str, rightVals: str) -> Dict[str, int]:
+def detect(img_path: str, right_vals: str) -> Dict[str, int]:
 
     results = {}
+    global params
 
-    results = auto_check_color(img_path, right_vals=rightVals, color="yellow")
-    # manual_calibration(img_path)
+    results = auto_check_color(img_path, right_vals=right_vals)
+    # manual_calibration(img_path, params["purple"])
 
     return results
 
