@@ -167,11 +167,41 @@ def check_validity(right_val, count, img_name, color):
         print("{} - Should be {}, is {}".format(color, right_val, count))
 
 
+def lets_rock(img_path: str, right_vals):
+    results = {"red": 0, "green": 0, "yellow": 0, "purple": 0}
+    colors = dict(red=(0, 0, 255),green=(0,255,0),yellow=(0,255,255),purple=(255,0,125))
+
+    img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+
+    scale = .2
+    width = int(img.shape[0] * scale)
+    height = int(img.shape[1] * scale)
+    resized = cv2.resize(img, (height, width), interpolation=cv2.INTER_AREA)
+    cv2.namedWindow('result')
+    cv2.imshow('result', resized)
+    cv2.waitKey(200)
+
+    global params
+    for color in params:
+        res = count_snacks(img_path, params[color])
+        results[color] = len(res["contours"])
+        cv2.drawContours(resized, res["contours"], -1, colors[color], 3)
+        cv2.imshow('result', resized)
+        cv2.waitKey(300)
+
+    cv2.imshow('result', resized)
+    cv2.waitKey(200)
+    cv2.destroyAllWindows()
+
+    return results
+
+
 def detect(img_path: str, right_vals: str) -> Dict[str, int]:
 
     results = {}
     global params
-    results = auto_check_color(img_path, right_vals=right_vals)
+    results = lets_rock(img_path, right_vals=right_vals)
+    # results = auto_check_color(img_path, right_vals=right_vals)
     # manual_calibration(img_path, params["purple"])
 
     return results
