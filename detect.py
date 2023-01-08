@@ -200,8 +200,8 @@ def detect(img_path: str, right_vals: str) -> Dict[str, int]:
 
     results = {}
     global params
-    results = lets_rock(img_path, right_vals=right_vals)
-    # results = auto_check_color(img_path, right_vals=right_vals)
+    # results = lets_rock(img_path, right_vals=right_vals)
+    results = auto_check_color(img_path, right_vals=right_vals)
     # manual_calibration(img_path, params["purple"])
 
     return results
