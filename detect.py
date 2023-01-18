@@ -150,7 +150,7 @@ def count_snacks(img_path: str, hsv_values):
     return {"contours": contours, "dilationRes": dilationRes}
 
 
-def auto_check_color(img_path: str, right_vals):
+def auto_check_color(img_path: str):
     results = {"red": 0, "green": 0, "yellow": 0, "purple": 0}
     global params
     for color in params:
@@ -196,12 +196,12 @@ def lets_rock(img_path: str, right_vals):
     return results
 
 
-def detect(img_path: str, right_vals: str) -> Dict[str, int]:
+def detect(img_path: str) -> Dict[str, int]:
 
     results = {}
     global params
     # results = lets_rock(img_path, right_vals=right_vals)
-    results = auto_check_color(img_path, right_vals=right_vals)
+    results = auto_check_color(img_path)
     # manual_calibration(img_path, params["purple"])
 
     return results
@@ -217,32 +217,32 @@ def main(data_path: Path, output_file_path: Path):
 
     results = {}
 
-    with open("properResultValues.json", "r") as f:
-        valid_data = json.load(f)
-        # print(data[img_path.split("\\")[1]])
+    # with open("properResultValues.json", "r") as f:
+    #     valid_data = json.load(f)
+    #     # print(data[img_path.split("\\")[1]])
 
     for img_path in tqdm(sorted(img_list)):
-        fruits = detect(str(img_path), valid_data)
+        fruits = detect(str(img_path))
         results[img_path.name] = fruits
 
-    score = 0
-
-    for name in results:
-        data = results[name]
-        tmp_score = 0
-        wage = 0
-        print(name)
-        for color in data:
-            tmp_score += abs(valid_data[name][color] - data[color])
-            wage += valid_data[name][color]
-            check_validity(valid_data[name][color], data[color], name, color)
-        print("\n")
-
-        score += tmp_score / wage
-
-    score = score * 100/40
-    print(f"relative error: {score}%")
-    print(f"score: {100-score}%")
+    # score = 0
+    #
+    # for name in results:
+    #     data = results[name]
+    #     tmp_score = 0
+    #     wage = 0
+    #     print(name)
+    #     for color in data:
+    #         tmp_score += abs(valid_data[name][color] - data[color])
+    #         wage += valid_data[name][color]
+    #         check_validity(valid_data[name][color], data[color], name, color)
+    #     print("\n")
+    #
+    #     score += tmp_score / wage
+    #
+    # score = score * 100/40
+    # print(f"relative error: {score}%")
+    # print(f"score: {100-score}%")
 
     with open(output_file_path, 'w') as ofp:
         json.dump(results, ofp)
